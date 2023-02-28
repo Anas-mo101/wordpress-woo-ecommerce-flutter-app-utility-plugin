@@ -25,30 +25,24 @@ class CartUtilityRestController extends WP_REST_Controller {
         $tax_total = 0.0;
         $shipping_total = 0.0;
 
+        $body_data = json_decode($request->get_body(), true);
+
         foreach ($body as $key) {
-            if ( !isset($request[$key]) ) {
-                return rest_ensure_response(array(
-                    'message' => 'missing requried properties',
-                    'status' => 'failed',
-                    'code' => 400,
-                ));
+            if ( !isset($body_data[$key]) ) {
+                return new WP_Error( 'failed', 'missing requried properties', array( 'status' => 400 ) );
             }
         }
 
-        $cart_products = (array) $request['line_items'];
-        $billing = (array) $request['billing'];
-        $shipping = isset($request['shipping']) ? (array) $request['shipping'] : false;
-        $shipping_lines = $request['shipping_lines'];
+        $cart_products = (array) $body_data['line_items'];
+        $billing = (array) $body_data['billing'];
+        $shipping = isset($body_data['shipping']) ? (array) $body_data['shipping'] : false;
+        $shipping_lines =  (array) $body_data['shipping_lines'];
 
         require( WC_ABSPATH . 'includes/wc-cart-functions.php' );
         require_once( WC_ABSPATH . 'includes/wc-notice-functions.php' );
 
         if(!function_exists('WC') && !class_exists('WC_Session_Handler') && !class_exists('WC_Customer') && !class_exists('WC_Cart') && !class_exists('WC_Product_Factory')){
-            return rest_ensure_response(array(
-                'message' => 'missing requried wc classes',
-                'status' => 'failed',
-                'code' => 400,
-            ));
+            return new WP_Error( 'failed', 'Imissing requried wc classes', array( 'status' => 400 ) );
         }
 
         $woocommerce = WC();
@@ -85,10 +79,9 @@ class CartUtilityRestController extends WP_REST_Controller {
         }
 
         if(count($shipping_lines) >= 1){
-            $shipping_total = (float) $shipping_lines[0]['total'];
+            $shipping_total = (float) $shipping_lines[0]['total'];  // handle shipping tax sepearatly
+            // if ($woocommerce->cart->needs_shipping()){ }
         }
-
-        // if ($woocommerce->cart->needs_shipping()){ }
 
         // The tax calculation for tax-inclusive prices is:
         // tax_amount = price - ( price / ( ( tax_rate_% / 100 ) + 1 ) )
@@ -97,8 +90,9 @@ class CartUtilityRestController extends WP_REST_Controller {
         // tax_amount = price * ( tax_rate_% / 100 )
             
         $shipping_tax = 0.0;
+        $tax_rate = 0.0;
         $cart_taxes = array();
-        if ( wc_tax_enabled()) {
+        if ( wc_tax_enabled() && count($tax_rates) > 0) {
             foreach ( $woocommerce->cart->get_cart_item_tax_classes() as $tkey => $tax ) {
                 $key = array_search($tax, array_column($tax_rates, 'tax_class'));
                 $rate = (float) $tax_rates[$key]['rate'];
@@ -106,16 +100,15 @@ class CartUtilityRestController extends WP_REST_Controller {
             }
 
             if(count($cart_taxes) == 1){
-                $rate = (float) array_values($cart_taxes[0])[0];
+                $rate = $tax_rate = (float) array_values($cart_taxes[0])[0];
                 if($woocommerce->cart->display_prices_including_tax()){
                     // calc shipping tax
                     $shipping_tax =  $shipping_total - ($shipping_total * ($rate / 100));
         
                     // calc cart tax => iterate cart items and apply tax formula
                     foreach ($woocommerce->cart->get_cart() as $key => $value) {
-                        $p = $product_factory->get_product($value['product_id']);
-                        $p_tax = (float) $p->get_price() - ((float) $p->get_price() * ($rate / 100));
-                        $tax_total += $value['quantity'] * $p_tax;
+                        $p_tax = (float) $value['line_subtotal'] - ((float) $value['line_subtotal'] * ($rate / 100));
+                        $tax_total += $p_tax;
                     }
                 }else{
                     // calc shipping tax
@@ -123,9 +116,8 @@ class CartUtilityRestController extends WP_REST_Controller {
         
                     // calc cart tax => iterate cart items and apply tax formula
                     foreach ($woocommerce->cart->get_cart() as $key => $value) {
-                        $p = $product_factory->get_product($value['product_id']);
-                        $p_tax = (float) $p->get_price() * ($rate / 100);
-                        $tax_total += $value['quantity'] * $p_tax;
+                        $p_tax = (float) $value['line_subtotal'] * ($rate / 100); // get price according to variation !!
+                        $tax_total += $p_tax;
                     }
                 }
             }elseif(count($cart_taxes) >= 2){
@@ -142,6 +134,7 @@ class CartUtilityRestController extends WP_REST_Controller {
         $total_to_pay = (float) number_format($subtotal + $shipping_total + ($tax_total + $shipping_tax), 2, '.', '');
 
         return rest_ensure_response([
+            'tax_rate' => $tax_rate,
             'subtotal' => $subtotal,
             'shipping_total' => $shipping_total,
             'cart_tax' => $tax_total,
