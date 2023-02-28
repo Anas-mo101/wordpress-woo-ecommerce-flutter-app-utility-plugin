@@ -20,6 +20,11 @@ class CartUtilityRestController extends WP_REST_Controller {
     // After a lot of research to the way woo-commerce uses persistent cart I have created a working solution.
     function woocommerce_calc_cart_totals( WP_REST_Request $request ) {
 
+        $auth = Jwt_Auth_Public::validate_rest_token($request);
+        if ( is_wp_error( $auth ) ) {
+			return $auth;
+		}
+
         $body = array('line_items', 'billing', 'shipping_lines');
 
         $tax_total = 0.0;

@@ -53,7 +53,7 @@ class Jwt_Auth_Public {
 	 * @since 1.3.1
 	 * @see https://www.rfc-editor.org/rfc/rfc7518#section-3
 	 */
-	private array $supported_algorithms = [ 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512' ];
+	private static  array $supported_algorithms = [ 'HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512' ];
 
 	/**
 	 * Initialize the class and set its properties.
@@ -449,10 +449,116 @@ class Jwt_Auth_Public {
 	 */
 	private function get_algorithm() {
 		$algorithm = apply_filters( 'jwt_auth_algorithm', 'HS256' );
-		if ( ! in_array( $algorithm, $this->supported_algorithms ) ) {
+		if ( ! in_array( $algorithm, Jwt_Auth_Public::$supported_algorithms ) ) {
 			return false;
 		}
 
 		return $algorithm;
+	}
+
+	/**
+	 * authorize token for rest modules
+	 */
+	public static function validate_rest_token( WP_REST_Request $request) {
+
+		$auth_header = $request->get_header( 'Authorization' );
+
+		if ( ! $auth_header ) {
+			return new WP_Error(
+				'jwt_auth_no_auth_header',
+				'Authorization header not found.',
+				[
+					'status' => 403,
+				]
+			);
+		}
+
+		/*
+		 * Extract the authorization header
+		 */
+		[ $token ] = sscanf( $auth_header, 'Bearer %s' );
+
+		/**
+		 * if the format is not valid return an error.
+		 */
+		if ( ! $token ) {
+			return new WP_Error(
+				'jwt_auth_bad_auth_header',
+				'Authorization header malformed.',
+				[
+					'status' => 403,
+				]
+			);
+		}
+
+		/** Get the Secret Key */
+		$secret_key = defined( 'JWT_AUTH_SECRET_KEY' ) ? JWT_AUTH_SECRET_KEY : false;
+		if ( ! $secret_key ) {
+			return new WP_Error(
+				'jwt_auth_bad_config',
+				'JWT is not configured properly, please contact the admin',
+				[
+					'status' => 403,
+				]
+			);
+		}
+
+		/** Try to decode the token */
+		try {
+
+			$algorithm = apply_filters( 'jwt_auth_algorithm', 'HS256' );
+
+			if ( ! in_array( $algorithm, Jwt_Auth_Public::$supported_algorithms ) ) {
+				return new WP_Error(
+					'jwt_auth_unsupported_algorithm',
+					__( 'Algorithm not supported, see https://www.rfc-editor.org/rfc/rfc7518#section-3', 'wp-api-jwt-auth' ),
+					[
+						'status' => 403,
+					]
+				);
+			}
+
+			$token = JWT::decode( $token, new Key( $secret_key, $algorithm ) );
+
+			/** The Token is decoded now validate the iss */
+			if ( $token->iss !== get_bloginfo( 'url' ) ) {
+				/** The iss do not match, return error */
+				return new WP_Error(
+					'jwt_auth_bad_iss',
+					'The iss do not match with this server',
+					[
+						'status' => 403,
+					]
+				);
+			}
+
+			/** So far so good, validate the user id in the token */
+			if ( ! isset( $token->data->user->id ) ) {
+				/** No user id in the token, abort!! */
+				return new WP_Error(
+					'jwt_auth_bad_request',
+					'User ID not found in the token',
+					[
+						'status' => 403,
+					]
+				);
+			}
+
+
+			return [
+				'code' => 'jwt_auth_valid_token',
+				'data' => [
+					'status' => 200,
+				],
+			];
+		} catch ( Exception $e ) {
+			return new WP_Error(
+				'jwt_auth_invalid_token',
+				$e->getMessage(),
+				[
+					'status' => 403,
+				]
+			);
+		}
 	}
 }
