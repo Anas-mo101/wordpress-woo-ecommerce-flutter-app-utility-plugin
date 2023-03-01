@@ -9,10 +9,15 @@ class CartUtilityRestController extends WP_REST_Controller {
 
     public function init_endpoints() {
 
-
         register_rest_route( $this->base_route, '/totals', array(
             'methods'  => 'POST',
             'callback' => array( $this, 'woocommerce_calc_cart_totals' ),
+            'permission_callback' => '__return_true'
+        ));
+
+        register_rest_route( $this->base_route, '/shipping-methods-rates', array(
+            'methods'  => 'GET',
+            'callback' => array( $this, 'woocommerce_get_shipping_methods_rates' ),
             'permission_callback' => '__return_true'
         ));
     }
@@ -147,6 +152,40 @@ class CartUtilityRestController extends WP_REST_Controller {
             'tax_total' => $shipping_tax + $tax_total,
             'total' => $total_to_pay
         ]);
+    }
+
+    public function woocommerce_get_shipping_methods_rates( WP_REST_Request $request ) {
+
+        $auth = Jwt_Auth_Public::validate_rest_token($request);
+        if ( is_wp_error( $auth ) ) {
+			return $auth;
+		}
+
+        $zone_id = $request->get_param('zone_id');
+
+        if ( !isset($zone_id) || $zone_id == '') {
+            return new WP_Error( 'failed', 'zone id is mising', array( 'status' => 400 ) );
+        }
+
+        $delivery_zones = WC_Shipping_Zones::get_zones();
+
+        $zone_methods = array();
+        foreach ((array) $delivery_zones as $key => $the_zone ) {
+            if($the_zone['id'] == $zone_id){
+                foreach ($the_zone['shipping_methods'] as $value) {
+                    $zone_methods[] = [
+                        "method_id" => $value->id,
+                        "method_title" => $value->method_title,
+                        "total" => $value->cost
+                    ];
+                }
+                break;
+            }
+        }
+
+        error_log(print_r($value,true));    
+
+        return rest_ensure_response($zone_methods);
     }
 
     function wooc_tax_rates(WC_Customer $customer){
