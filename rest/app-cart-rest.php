@@ -183,8 +183,6 @@ class CartUtilityRestController extends WP_REST_Controller {
             }
         }
 
-        error_log(print_r($value,true));    
-
         return rest_ensure_response($zone_methods);
     }
 
