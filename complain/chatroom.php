@@ -16,8 +16,6 @@ $user_avatar = get_chat_avatar_url($user_id);
 
 ?>
 
-<link rel="stylesheet" href="<?= WP_PLUGIN_DIR ?>/wp-wc-flutter-app-utility/admin/style/chatroom-style.css">
-
 <div id="chatbox_super_container">
     <div class="col-6 px-0 shadow">
         <table>

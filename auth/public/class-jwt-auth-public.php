@@ -550,6 +550,7 @@ class Jwt_Auth_Public {
 				'code' => 'jwt_auth_valid_token',
 				'data' => [
 					'status' => 200,
+					'user_id' => $token->data->user->id
 				],
 			];
 		} catch ( Exception $e ) {

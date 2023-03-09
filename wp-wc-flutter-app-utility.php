@@ -19,6 +19,8 @@ if(!class_exists('AppUtility')){
 	        $auth->run();
             new AppRest();
             new AR();
+            new Complain();
+            new Ads();
         }
 
         function deactivate(){
@@ -37,6 +39,8 @@ if(class_exists('AppUtility')){
     require_once 'rest/app-rest.php';
     require 'auth/includes/class-jwt-auth.php';
     require 'ar/ar.php';
+    require 'complain/complain.php';
+    require 'ads/ads.php';
 
     $remoteFileManager = new AppUtility();
     register_activation_hook( __FILE__, array($remoteFileManager, 'activiate') );
