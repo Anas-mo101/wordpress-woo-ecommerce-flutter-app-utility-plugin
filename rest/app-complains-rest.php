@@ -66,6 +66,7 @@ class AppComplainsRest extends WP_REST_Controller {
         // add_action( 'manage_app_complains_posts_custom_column' , array($this, 'custom_column' ), 10, 2 );
 
         add_action( 'save_post', array($this, 'save_custom_fields' ), 1, 2 );
+        add_action('admin_enqueue_scripts', array($this, 'admin_edit_scripts') );
 
         add_action( 'do_meta_boxes', array($this, 'remove_default_custom_fields' ), 10, 3 );
         add_action( 'admin_menu', array($this, 'create_custom_fields' ) );
@@ -104,6 +105,17 @@ class AppComplainsRest extends WP_REST_Controller {
             );
         }
     }
+
+    function admin_edit_scripts( $hook ) {
+        global $post;
+        $dir = plugin_dir_url( __FILE__ );
+        if ( $hook == 'post-new.php' || $hook == 'post.php' ) {
+            if ( $this->ac_post_type === $post->post_type ) {    
+                wp_enqueue_style( 'chatroom', $dir . 'admin/style/chatroom-style.css' );
+            }
+        }
+    }
+
 
     function display_inbox() {
         global $post;  
@@ -283,9 +295,22 @@ class AppComplainsRest extends WP_REST_Controller {
             'sending_datetime' => date("D M d, Y G:i")
         ];
         $msgs[] = $new_msg; 
+
+        // ===
+
+        $current_user = wp_get_current_user();
+        $id = $current_user->ID;
+
+        $new_msg = [
+            'sender' => 'admin',
+            'sender_id' =>  $id,
+            'message' => 'Thanks for reaching out, a customer support agent will get in touch with you shortly.',
+            'sending_datetime' => date("D M d, Y G:i")
+        ];
+        $msgs[] = $new_msg; 
         $msgs_json = json_encode($msgs);
 
-        ///
+        /// ===
 
 
         $result = wp_insert_post(array(
