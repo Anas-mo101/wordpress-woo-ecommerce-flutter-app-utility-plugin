@@ -1,7 +1,7 @@
 ## wordpress-woo-ecommerce-flutter-app-utility-plugin
 
 
-![alt text](https://github.com/Anas-mo101/flutter-woo-ecommerce-app/blob/main/screenshots/app_arch.png?raw=true)
+![alt text](https://github.com/Anas-mo101/wordpress-woo-ecommerce-flutter-app-utility-plugin/blob/main/screenshots/app_arch.png?raw=true)
 
 A WordPress plugin that helps integrate flutter ecommerce app [flutter-woo-ecommerce-app](https://github.com/Anas-mo101/flutter-woo-ecommerce-app) 
 
