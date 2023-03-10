@@ -30,3 +30,77 @@ A WordPress plugin that helps integrate flutter ecommerce app [flutter-woo-ecomm
 - To be lightweight and fast
 - No Firebase ! or other 3rd party backend services
 - Support Android and IOS
+
+## API Reference
+
+#### cart totals
+
+```http
+  POST https://<dn>/wp-json/app-utility/v1/totals
+```
+gets cart subtotals, tax total and total by providing line items
+
+
+#### new complain
+
+```http
+  POST https://<dn>/wp-json/app-utility/v1/complain
+```
+
+submit a new complain message
+
+#### complain response
+
+```http
+  POST https://<dn>/wp-json/app-utility/v1/complain/responed
+```
+
+send a follow up response to complain
+
+#### get complain
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/complain/single?complain_id=XX
+```
+
+get a complain by id
+
+#### all complains
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/complains
+```
+
+get all complains
+
+#### shipping methods rates
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/shipping-methods-rates?zone_id=XX
+```
+
+get all shipping methods rate by zone
+
+#### all ads
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/ads/all
+```
+
+get all ads
+
+#### ads
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/ads
+```
+
+get ads
+
+#### ads settings
+
+```http
+  GET https://<dn>/wp-json/app-utility/v1/ads/settings
+```
+
+get ads settings
